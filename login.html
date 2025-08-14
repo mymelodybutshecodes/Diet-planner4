@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Results — Wellness</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#fff6f9;--bg2:#fff1f5;--accent:#d8558f;--muted:#6f5966;--glass:#f4d6e3}
+*{box-sizing:border-box}body{margin:0;font-family:Poppins,system-ui;background:linear-gradient(120deg,var(--bg1),var(--bg2));min-height:100vh;padding:24px;color:#36242f}
+.wrap{max-width:980px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:18px}
+@media(max-width:900px){ .wrap{grid-template-columns:1fr} }
+.card{background:rgba(255,255,255,0.88);border-radius:14px;padding:16px;border:1px solid var(--glass);box-shadow:0 12px 34px rgba(216,81,134,0.06)}
+.title{font-family:'Playfair Display',serif;color:var(--accent);font-weight:600}
+.row{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.kpi{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.tile{background:#fff;padding:10px;border-radius:10px;border:1px solid var(--glass);min-width:120px;text-align:center}
+.meal{margin-top:10px}
+.meal h4{margin:6px 0 6px 0}
+.week{display:grid;gap:12px;margin-top:10px}
+@media(min-width:760px){ .week{grid-template-columns:repeat(2,1fr)} }
+.day{background:#fff;padding:10px;border-radius:10px;border:1px solid var(--glass)}
+.small{color:var(--muted);font-size:13px}
+.controls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{padding:10px 12px;border-radius:12px;border:none;background:linear-gradient(90deg,#ff9bc6,#d8558f);color:white;font-weight:600;cursor:pointer}
+.btn.ghost{background:#fff;border:1px solid #f3cfe0;color:var(--accent)}
+.footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+  <div style="max-width:1100px;margin:0 auto">
+    <header style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(180deg,#ff9bc6,#d8558f);display:grid;place-items:center;color:white">★</div>
+      <div><div class="title">Your Plan</div><div class="small">Personalized & saved locally</div></div>
+    </header>
+
+    <div class="wrap">
+      <main class="card" id="main-card">
+        <div class="row"><div style="font-weight:700">Summary</div><div class="small" id="date"></div></div>
+        <div class="kpi" id="kpi-row">
+          <!-- KPI tiles inserted here -->
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-weight:700">Macros</div>
+          <div style="margin-top:8px" id="macros">—</div>
+        </div>
+
+        <div class="meal">
+          <div style="font-weight:700;margin-top:12px">7-Day Meal Plan</div>
+          <div class="week" id="meal-week"></div>
+        </div>
+
+        <div class="meal">
+          <div style="font-weight:700;margin-top:12px">7-Day Workout Plan</div>
+          <div class="week" id="work-week"></div>
+        </div>
+
+        <div class="meal">
+          <div style="font-weight:700;margin-top:12px">Friendly Tips</div>
+          <ul class="small" style="margin-top:8px">
+            <li>Sleep 7–9 hours for better recovery.</li>
+            <li>Aim for protein at every meal — helps satiety and muscle.</li>
+            <li>Hydrate well: ~30–35 ml per kg bodyweight daily.</li>
+          </ul>
+        </div>
+
+        <div class="controls">
+          <button class="btn" id="download-plan">Download JSON</button>
+          <button class="btn ghost" id="back-edit">Edit answers</button>
+          <button class="btn ghost" id="logout">Log out</button>
+        </div>
+      </main>
+
+      <aside class="card">
+        <div style="font-weight:700;color:var(--accent)">Quick View</div>
+        <div style="margin-top:8px" id="quick-view"></div>
+        <div style="margin-top:12px" class="small">You can print or download this plan. Everything lives in your browser.</div>
+      </aside>
+    </div>
+
+    <div class="footer">Made with care — educational purposes only.</div>
+  </div>
+
+<script>
+// read answers from localStorage
+function loadAnswers(){ try{ return JSON.parse(localStorage.getItem('wp_answers')||'null'); }catch(e){return null} }
+function clearAnswers(){ localStorage.removeItem('wp_answers'); }
+const answers = loadAnswers() || {};
+if(!answers || !answers.height){ document.getElementById('main-card').innerHTML = '<div style="padding:20px">No answers found. <a href="planner.html">Go back to create a plan</a></div>'; }
+
+function calcBMR(w,h,age,gender){
+  const base = 10*w + 6.25*h - 5*age; if(gender==='male') return base+5; if(gender==='female') return base-161; return base-78;
+}
+function determineGoal(curr, ideal){ if(ideal < curr-0.5) return 'lose'; if(ideal > curr+0.5) return 'gain'; return 'maintain'; }
+function planCalories(tdee, goal){ if(goal==='lose') return Math.max(1200,tdee-500); if(goal==='gain') return tdee+300; return tdee; }
+function calcMacros(goal,w,cal){ const proteinPerKg = (goal==='lose')?1.8:1.6; const protein=Math.round(proteinPerKg*w); const fatKcal = cal*((goal==='lose')?0.25:0.30); const fat = Math.round(fatKcal/9); const carbs = Math.round(Math.max(0,(cal - protein*4 - fatKcal)/4)); return {protein,carbs,fat}; }
+const activityFactor = {sedentary:1.2, light:1.375, moderate:1.55, active:1.725, athlete:1.9};
+
+const MEALS = {
+  lean:{ breakfast:['Yogurt + berries + chia','Veggie omelette + toast','Overnight oats + protein + banana'], lunch:['Grilled chicken salad','Paneer + quinoa + salad','Dal + brown rice + veg'], snack:['Apple + peanut butter','Protein shake','Roasted chana'], dinner:['Baked fish + veg','Tofu stir-fry + rice','Chicken curry + cauli-rice']},
+  toned:{ breakfast:['Besan chilla + curd','Smoothie bowl','Scrambled eggs/tofu + toast'], lunch:['Grilled fish/tofu + couscous','Rajma + rice + salad','Buddha bowl'], snack:['Hummus + veg','Cottage cheese + cucumber','Mixed nuts (small)'], dinner:['Lettuce wraps','Khichdi + small ghee','Veg fried rice (light oil)']},
+  muscular:{ breakfast:['Oats + milk + protein + nuts','Egg scramble + toast','PB banana smoothie'], lunch:['Chicken rice bowl + veg','Paneer masala + roti','Turkey/soy mince + pasta'], snack:['Greek yogurt + granola','Trail mix','Protein shake + banana'], dinner:['Steak/tempeh + potatoes + greens','Chicken & rice + raita','Soya chaap + rice + salad']}
+};
+function pick(list,i){ return list[i % list.length]; }
+function generateWeek(build,cal){ return Array.from({length:7}).map((_,i)=>({ breakfast:{name:pick(MEALS[build].breakfast,i),cal:Math.round(cal*0.25)}, lunch:{name:pick(MEALS[build].lunch,i),cal:Math.round(cal*0.35)}, snack:{name:pick(MEALS[build].snack,i),cal:Math.round(cal*0.10)}, dinner:{name:pick(MEALS[build].dinner,i),cal:Math.round(cal*0.30)} })); }
+function workoutsFor(build){ if(build==='muscular') return [['Bench 4×6–8','OHP 3×8–10','Incline 3×10'],['Squat 4×5–8','RDL 3×8–10'],['Pull-ups 4×6–10','Row 3×6–10'],['Cardio 30–40 min'],['Deadlift 3×3–5','DB Press 3×8–10'],['HIIT 10×1min'],['Rest / walk']]; if(build==='lean') return [['Full body 3×10'],['Zone-2 35–45min'],['Lower 3×10'],['Walk 8–10k'],['Upper 3×10'],['HIIT 8×1min'],['Yoga 30min']]; return [['Circuit','Pilates/Core'],['Glutes & legs'],['LISS 45min'],['Upper+core'],['Mobility'],['Active rest'],['Rest']]; }
+
+const h = Number(answers.height||0), w = Number(answers.weight||0), age = Number(answers.age||0), gender = answers.gender||'female', activity = answers.activity||'moderate', ideal = Number(answers.ideal||w), build = answers.build||'toned';
+const bmi = h && w ? (w / Math.pow(h/100,2)) : null;
+const bmr = calcBMR(w,h,age,gender);
+const tdee = Math.round(bmr * (activityFactor[activity]||1.55));
+const goal = determineGoal(w,ideal);
+const target = planCalories(tdee,goal);
+const macros = calcMacros(goal,w,target);
+const weekMeals = generateWeek(build, target);
+const workWeek = workoutsFor(build);
+
+document.getElementById('date').textContent = new Date().toLocaleDateString();
+const kpiRow = document.getElementById('kpi-row');
+kpiRow.innerHTML = `
+  <div class="tile"><div class="small">BMI</div><div style="font-weight:700">${bmi? (Math.round(bmi*10)/10).toFixed(1) : '—'}</div></div>
+  <div class="tile"><div class="small">Category</div><div style="font-weight:700">${bmi? (bmi<18.5?'Under':bmi<25?'Normal':bmi<30?'Over':'Obese') : '—'}</div></div>
+  <div class="tile"><div class="small">BMR</div><div style="font-weight:700">${Math.round(bmr)} kcal</div></div>
+  <div class="tile"><div class="small">TDEE</div><div style="font-weight:700">${tdee} kcal</div></div>
+`;
+document.getElementById('macros').innerHTML = `<div style="margin-top:6px"><b>${macros.protein}g</b> protein • <b>${macros.carbs}g</b> carbs • <b>${macros.fat}g</b> fats • Target: <b>${target} kcal</b></div>`;
+
+const mealWeek = document.getElementById('meal-week');
+weekMeals.forEach((d,i)=>{
+  const el = document.createElement('div'); el.className='day';
+  el.innerHTML = `<div style="font-weight:700">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</div>
+  <ul style="margin:8px 0 0 0;padding:0;list-style:none;font-size:14px">
+    <li><b>Breakfast:</b> ${d.breakfast.name} <small class="small">(${d.breakfast.cal} kcal)</small></li>
+    <li><b>Lunch:</b> ${d.lunch.name} <small class="small">(${d.lunch.cal} kcal)</small></li>
+    <li><b>Snack:</b> ${d.snack.name} <small class="small">(${d.snack.cal} kcal)</small></li>
+    <li><b>Dinner:</b> ${d.dinner.name} <small class="small">(${d.dinner.cal} kcal)</small></li>
+  </ul>`;
+  mealWeek.appendChild(el);
+});
+
+const workWeekEl = document.getElementById('work-week');
+workWeek.forEach((d,i)=>{
+  const el = document.createElement('div'); el.className='day';
+  el.innerHTML = `<div style="font-weight:700">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</div><ul style="margin:8px 0 0 0;padding:0;list-style:none;font-size:14px">${d.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  workWeekEl.appendChild(el);
+});
+
+document.getElementById('quick-view').innerHTML = `<div class="small">Goal: <b>${goal}</b></div><div class="small">Target: <b>${target} kcal</b></div><div class="small">Build: <b>${build}</b></div>`;
+
+document.getElementById('download-plan').addEventListener('click', ()=>{
+  const payload = {answers, metrics:{bmi, bmr, tdee, goal, target}, macros, week:{meals:weekMeals, workouts:workWeek}};
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download='wellness-plan.json'; a.click(); URL.revokeObjectURL(url);
+});
+document.getElementById('back-edit').addEventListener('click', ()=>{ location.href='planner.html'; });
+document.getElementById('logout').addEventListener('click', ()=>{ if(confirm('Clear local account & answers?')){ localStorage.removeItem('wp_account'); localStorage.removeItem('wp_answers'); location.href='index.html'; } });
+</script>
+</body>
+</html>
