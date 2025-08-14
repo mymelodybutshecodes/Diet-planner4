@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Quiz</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #fff5f8;
+            color: #444;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .quiz-container {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            color: #cc6e91;
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-top: 0.8rem;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.3rem;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .checkbox-group {
+            margin-top: 0.5rem;
+        }
+        button {
+            background-color: #cc6e91;
+            color: white;
+            padding: 0.7rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1.2rem;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #b85f80;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h2>Tell us about yourself</h2>
+    <label>Age: <input type="number" id="age"></label>
+    <label>Height (cm): <input type="number" id="height"></label>
+    <label>Weight (kg): <input type="number" id="weight"></label>
+    <label>Gender:
+        <select id="gender">
+            <option value="">Select</option>
+            <option>Female</option>
+            <option>Male</option>
+            <option>Other</option>
+        </select>
+    </label>
+    <label>Fitness Goal:
+        <select id="goal">
+            <option value="">Select</option>
+            <option>Weight Loss</option>
+            <option>Muscle Gain</option>
+            <option>Endurance</option>
+            <option>General Wellness</option>
+        </select>
+    </label>
+    <label>Preferred Workout Location:
+        <select id="location">
+            <option value="">Select</option>
+            <option>Home</option>
+            <option>Gym</option>
+        </select>
+    </label>
+    <label>
+        <input type="checkbox" id="vegan"> Vegan
+    </label>
+    <label>Allergies:
+        <div class="checkbox-group">
+            <label><input type="checkbox" value="nuts" class="allergy"> Nuts</label>
+            <label><input type="checkbox" value="dairy" class="allergy"> Dairy</label>
+            <label><input type="checkbox" value="gluten" class="allergy"> Gluten</label>
+        </div>
+    </label>
+    <button onclick="saveQuiz()">Get My Plan</button>
+</div>
+
+<script>
+function saveQuiz() {
+    const data = {
+        age: document.getElementById("age").value,
+        height: document.getElementById("height").value,
+        weight: document.getElementById("weight").value,
+        gender: document.getElementById("gender").value,
+        goal: document.getElementById("goal").value,
+        location: document.getElementById("location").value,
+        vegan: document.getElementById("vegan").checked,
+        allergies: Array.from(document.querySelectorAll(".allergy:checked")).map(a => a.value)
+    };
+
+    if (!data.age || !data.height || !data.weight || !data.gender || !data.goal || !data.location) {
+        alert("Please complete all required fields.");
+        return;
+    }
+
+    localStorage.setItem("quizData", JSON.stringify(data));
+    window.location.href = "plan.html";
+}
+</script>
+
+</body>
+</html>
